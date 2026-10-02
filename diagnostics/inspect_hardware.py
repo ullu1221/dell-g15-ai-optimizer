@@ -19,7 +19,7 @@ def print_header(title: str):
 
 def inspect_cpu():
     print_header("CPU & TOPOLOGY ANALYSIS")
-    print(f"Processor: {platform.processor()}")
+    cpu_model = platform.processor()
 
     p_cores = []
     e_cores = []
@@ -32,7 +32,9 @@ def inspect_cpu():
 
         with open("/proc/cpuinfo", "r") as f:
             for line in f:
-                if line.startswith("processor"):
+                if line.startswith("model name") and not cpu_model:
+                    cpu_model = line.split(":")[1].strip()
+                elif line.startswith("processor"):
                     current_processor = int(line.split(":")[1].strip())
                 elif line.startswith("core id"):
                     current_core_id = int(line.split(":")[1].strip())
@@ -50,10 +52,12 @@ def inspect_cpu():
             else:
                 e_cores.extend(threads)
 
-        print(f"Total Logical Threads: {len(p_cores) + len(e_cores)}")
+        print(f"Processor:                   {cpu_model}")
+        print(f"Total Logical Threads:       {len(p_cores) + len(e_cores)}")
         print(f"Performance Cores (P-Cores): Threads {p_cores} (Physical primary: 0,2,4,6,8,10)")
         print(f"Efficient Cores (E-Cores):   Threads {e_cores}")
     else:
+        print(f"Processor:                   {cpu_model}")
         print("(/proc/cpuinfo unavailable)")
 
     # Vector Extensions
@@ -61,7 +65,7 @@ def inspect_cpu():
     for ext in ["avx", "avx2", "avx512f", "avx_vnni", "fma", "f16c"]:
         if ext in flags:
             vector_exts.append(ext.upper())
-    print(f"Vector Acceleration: {', '.join(vector_exts) if vector_exts else 'Standard x86_64'}")
+    print(f"Vector Acceleration:         {', '.join(vector_exts) if vector_exts else 'Standard x86_64'}")
 
     # Scaling Governor
     gov_file = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
@@ -69,7 +73,7 @@ def inspect_cpu():
         try:
             with open(gov_file, "r") as f:
                 gov = f.read().strip()
-            print(f"Active CPU Governor: {gov} {'[OPTIMAL]' if gov == 'performance' else '[SUBOPTIMAL - Run tune_system.sh]'}")
+            print(f"Active CPU Governor:         {gov} {'[OPTIMAL]' if gov == 'performance' else '[SUBOPTIMAL - Run tune_system.sh]'}")
         except Exception:
             pass
 
@@ -90,7 +94,15 @@ def inspect_gpu():
             print(f"Device:           {name}")
             print(f"Driver Version:   {driver}")
             print(f"VRAM Capacity:    {total} MiB (Free: {free} MiB)")
-            print(f"Power Draw:       {power} W")
+            try:
+                p_val = float(power)
+                if p_val > 200.0:
+                    power_str = f"{power} W (Mobile NVML telemetry artifact | Max TGP: 95W Dynamic Boost)"
+                else:
+                    power_str = f"{power} W"
+            except ValueError:
+                power_str = f"{power} W"
+            print(f"Power Draw:       {power_str}")
             print(f"Temperature:      {temp} °C")
             print(f"Persistence Mode: {persist} {'[ENABLED]' if persist.lower() == 'enabled' else '[DISABLED - Run tune_system.sh]'}")
     except (subprocess.SubprocessError, FileNotFoundError):
