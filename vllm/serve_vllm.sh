@@ -36,6 +36,24 @@ export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 export VLLM_USE_FLASHINFER_SAMPLER="0"
 export VLLM_LOGGING_LEVEL="INFO"
 
+# Pre-flight VRAM headroom check
+if command -v nvidia-smi &>/dev/null; then
+    FREE_VRAM=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -n 1 || echo "6000")
+    if [[ "$FREE_VRAM" -lt 4500 ]]; then
+        echo "[!] Low free VRAM detected (${FREE_VRAM} MiB available)."
+        if command -v ollama &>/dev/null; then
+            ACTIVE_OLLAMA=$(ollama ps 2>/dev/null | awk 'NR>1 {print $1}')
+            if [[ -n "$ACTIVE_OLLAMA" ]]; then
+                echo "[+] Unloading lingering Ollama models to reclaim VRAM: $ACTIVE_OLLAMA"
+                for m in $ACTIVE_OLLAMA; do
+                    ollama stop "$m" || true
+                done
+                sleep 2
+            fi
+        fi
+    fi
+fi
+
 echo "=========================================================="
 echo " Starting vLLM Engine (6GB VRAM Budget Profile)"
 echo " Model:             $MODEL"

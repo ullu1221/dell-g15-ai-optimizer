@@ -29,6 +29,24 @@ CTX="${CTX:-8192}"
 # Bind strictly to the 6 physical Performance cores
 CPU_AFFINITY="${CPU_AFFINITY:-0,2,4,6,8,10}"
 
+# Pre-flight VRAM headroom check
+if command -v nvidia-smi &>/dev/null; then
+    FREE_VRAM=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -n 1 || echo "6000")
+    if [[ "$FREE_VRAM" -lt 4000 ]]; then
+        echo "[!] Low free VRAM detected (${FREE_VRAM} MiB available)."
+        if command -v ollama &>/dev/null; then
+            ACTIVE_OLLAMA=$(ollama ps 2>/dev/null | awk 'NR>1 {print $1}')
+            if [[ -n "$ACTIVE_OLLAMA" ]]; then
+                echo "[+] Unloading lingering Ollama models to reclaim VRAM: $ACTIVE_OLLAMA"
+                for m in $ACTIVE_OLLAMA; do
+                    ollama stop "$m" || true
+                done
+                sleep 2
+            fi
+        fi
+    fi
+fi
+
 echo "=========================================================="
 echo " Starting Minimal-Loss Hybrid Inference"
 echo " Model:       $MODEL"

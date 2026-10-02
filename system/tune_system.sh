@@ -48,6 +48,23 @@ echo "[4/4] Verifying GPU Power & Memory..."
 GPU_INFO=$(nvidia-smi --query-gpu=power.limit,memory.total,memory.free --format=csv,noheader)
 echo "  -> GPU Specs: $GPU_INFO"
 
+# Copy binary to /usr/local/bin if not already present
+if [[ ! -f /usr/local/bin/dell-g15-tune ]]; then
+    cp "$0" /usr/local/bin/dell-g15-tune
+    chmod +x /usr/local/bin/dell-g15-tune
+    echo "  -> Installed standalone tuning binary to /usr/local/bin/dell-g15-tune"
+fi
+
+if [[ "${1:-}" == "--install-service" ]]; then
+    SERVICE_SRC="$(dirname "$0")/dell_g15_tuning.service"
+    if [[ -f "$SERVICE_SRC" ]]; then
+        cp "$SERVICE_SRC" /etc/systemd/system/dell_g15_tuning.service
+        systemctl daemon-reload
+        systemctl enable --now dell_g15_tuning.service
+        echo "  -> Systemd service 'dell_g15_tuning.service' enabled and active!"
+    fi
+fi
+
 echo "=========================================================="
 echo " [SUCCESS] System is tuned to maximum theoretical performance!"
 echo "=========================================================="
