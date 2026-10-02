@@ -164,12 +164,35 @@ def cmd_status():
     print(f"Physical P-Cores:      Primary threads 0, 2, 4, 6, 8, 10")
     print(f"Vector Acceleration:   {'AVX2, AVX_VNNI (Hardware INT8)' if 'avx_vnni' in flags else 'Standard'}")
 
-    # Scaling Governor
+    # Scaling Governor & Power Profiles
     gov_file = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+    gov = "unknown"
     if os.path.exists(gov_file):
         with open(gov_file, "r") as f:
             gov = f.read().strip()
-        print(f"Active CPU Governor:   {gov} {'[OPTIMAL]' if gov == 'performance' else '[SUBOPTIMAL - Run: g15 tune]'}")
+
+    epp_file = "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+    epp = "unknown"
+    if os.path.exists(epp_file):
+        with open(epp_file, "r") as f:
+            epp = f.read().strip()
+
+    profile = "unknown"
+    if shutil.which("powerprofilesctl"):
+        try:
+            res = subprocess.run(["powerprofilesctl", "get"], capture_output=True, text=True)
+            profile = res.stdout.strip()
+        except Exception:
+            pass
+
+    plat_profile_file = "/sys/firmware/acpi/platform_profile"
+    plat_profile = "unknown"
+    if os.path.exists(plat_profile_file):
+        with open(plat_profile_file, "r") as f:
+            plat_profile = f.read().strip()
+
+    print(f"Power Profile:         {profile.upper()} (ACPI: {plat_profile}, EPP: {epp})")
+    print(f"CPU Scaling Governor:  {gov}")
 
     # GPU Information
     print("\n" + "-" * 60)
@@ -235,6 +258,40 @@ def cmd_tune(enable_service: bool = False):
     if enable_service:
         cmd.append("--install-service")
     subprocess.run(cmd)
+
+
+def cmd_mode(target: str):
+    target = target.lower().strip()
+    valid_modes = {"performance", "balanced", "power-saver", "quiet"}
+    if target == "balance":
+        target = "balanced"
+    elif target in ("saver", "quiet"):
+        target = "power-saver"
+
+    if target not in valid_modes:
+        print(f"[ERROR] Invalid mode '{target}'. Valid choices: performance, balanced, power-saver")
+        sys.exit(1)
+
+    print(f"[+] Setting Dell G15 power profile to '{target}'...")
+    if shutil.which("powerprofilesctl"):
+        res = subprocess.run(["powerprofilesctl", "set", target], capture_output=True, text=True)
+        if res.returncode == 0:
+            print(f"[✓] Successfully activated '{target}' mode via power-profiles-daemon.")
+            return
+
+    # Fallback to direct EPP / ACPI
+    epp_map = {
+        "performance": "performance",
+        "balanced": "balance_performance",
+        "power-saver": "power",
+    }
+    epp_val = epp_map.get(target, "balance_performance")
+    for epp in Path("/sys/devices/system/cpu").glob("cpu*/cpufreq/energy_performance_preference"):
+        try:
+            epp.write_text(epp_val)
+        except Exception:
+            pass
+    print(f"[✓] Applied '{target}' mode to hardware registers.")
 
 
 def cmd_list():
@@ -409,6 +466,13 @@ def main():
     test_parser = subparsers.add_parser("test", help="Test & benchmark active OpenAI API server")
     test_parser.add_argument("--url", default=f"http://localhost:{SERVER_DEFAULT_PORT}/v1", help="API base URL")
 
+    # mode
+    mode_parser = subparsers.add_parser("mode", help="Switch power profile (performance, balanced, power-saver)")
+    mode_parser.add_argument("target", nargs="?", default="balanced", help="Target mode: performance, balanced, power-saver")
+
+    # balance (alias for mode balanced)
+    subparsers.add_parser("balance", help="Quick shortcut to activate balanced mode")
+
     # benchmark
     subparsers.add_parser("benchmark", help="Run automated throughput and prompt eval benchmark")
 
@@ -422,6 +486,10 @@ def main():
         cmd_status()
     elif args.command == "tune":
         cmd_tune(args.service)
+    elif args.command == "mode":
+        cmd_mode(args.target)
+    elif args.command == "balance":
+        cmd_mode("balanced")
     elif args.command in ("free", "unload"):
         unload_all_vram()
     elif args.command == "list":

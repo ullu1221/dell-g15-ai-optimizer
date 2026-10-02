@@ -72,6 +72,8 @@ Instead of juggling separate shell scripts, memory commands, and engine paramete
 ```bash
 g15 status               # Real-time inspection: CPU topology, GPU VRAM, thermals
 g15 tune                 # 1-click performance tuning (locks clocks, persistence mode)
+g15 balance              # Instantly activates quiet/balanced power profile
+g15 mode <perf|bal|save> # Switch hardware profile (performance, balanced, power-saver)
 g15 free                 # Immediately flushes VRAM to 0 MB (unloads idle models)
 g15 list                 # Pretty-prints model matrix, speeds, and roles
 g15 chat coder           # Launches 100% GPU Q5_K_M coding assistant (~38 tok/s)

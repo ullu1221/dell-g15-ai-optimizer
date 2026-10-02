@@ -22,21 +22,19 @@ echo "[1/4] Enabling NVIDIA Persistence Mode..."
 nvidia-smi -pm 1 > /dev/null
 echo "  -> Persistence mode ON (driver context retained in VRAM)"
 
-# 2. Set CPU Scaling Governor to Performance
-echo "[2/4] Locking Intel P-Cores & E-Cores to Performance Governor..."
-for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-    if [[ -f "$gov" ]]; then
-        echo "performance" > "$gov"
-    fi
-done
+# 2. Set CPU Scaling Governor & EPP to Performance
+echo "[2/4] Setting CPU Profile & Energy Performance Preference to Performance..."
+if command -v powerprofilesctl &>/dev/null; then
+    powerprofilesctl set performance 2>/dev/null || true
+fi
 
-# Set Energy Performance Preference (EPP) to performance
+# Ensure EPP is performance without locking hardware registers
 for epp in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do
     if [[ -f "$epp" ]]; then
         echo "performance" > "$epp" 2>/dev/null || true
     fi
 done
-echo "  -> CPU scaling governor locked to 'performance' (up to 4.6 GHz turbo)"
+echo "  -> CPU profile & EPP active in 'performance' mode (up to 4.6 GHz turbo)"
 
 # 3. Kernel Memory Map Limit for large GGUF mmap loading
 echo "[3/4] Optimizing Kernel Virtual Memory Map Limits..."
