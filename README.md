@@ -65,14 +65,35 @@ This suite provides pre-configured, turn-key solutions for all of the above.
 
 ---
 
+## 🎮 Unified Controller: The `g15` Engine
+
+Instead of juggling separate shell scripts, memory commands, and engine parameters across Ollama, `llama.cpp`, and `vLLM`, the suite provides **`g15`**—a single unified CLI and server controller:
+
+```bash
+g15 status               # Real-time inspection: CPU topology, GPU VRAM, thermals
+g15 tune                 # 1-click performance tuning (locks clocks, persistence mode)
+g15 free                 # Immediately flushes VRAM to 0 MB (unloads idle models)
+g15 list                 # Pretty-prints model matrix, speeds, and roles
+g15 chat coder           # Launches 100% GPU Q5_K_M coding assistant (~38 tok/s)
+g15 chat reasoner        # Launches 14B hybrid reasoner (P-core pinned, ~9 tok/s)
+g15 chat agent           # Launches Hermes 3 8B uncensored agent (~35 tok/s)
+g15 chat fast            # Launches Gemma 4 4B fast assistant (~70 tok/s)
+g15 serve reasoner       # Starts OpenAI API server on port 8080 (P-core pinned)
+g15 test                 # Benchmarks active API server (TTFT & tok/s)
+g15 benchmark            # Runs prompt eval & token generation benchmark
+```
+
+---
+
 ## 📁 Repository Structure
 
 ```
 dell-g15-ai-optimizer/
+├── g15                            # Master Unified CLI & Server Controller
 ├── README.md                      # Primary documentation & architectural overview
 ├── LICENSE                        # MIT License
 ├── .gitignore                     # Model weight & build artifact filters
-├── setup.sh                       # One-click permission & environment setup
+├── setup.sh                       # One-click permission & global symlink setup
 │
 ├── system/                        # System-level hardware tuning
 │   ├── tune_system.sh             # 1-click Linux hardware optimization script
@@ -94,69 +115,54 @@ dell-g15-ai-optimizer/
 ├── diagnostics/                   # Hardware analysis tools
 │   └── inspect_hardware.py        # CPU topology & GPU memory inspector
 │
-├── docs/                          # Detailed engineering reports
-│   ├── MODEL_GUIDE_AND_INVENTORY.md # Live system model inventory & selection criteria
-│   ├── DELL_G15_5530_REVIEW.md    # Hardware analysis, bottlenecks & thermal guide
-│   └── BENCHMARK_RESULTS.md       # Empirical benchmark results & optimization matrix
-│
-└── apps/                          # Built-in showcase applications
-    └── weather-dashboard/         # Ultra-responsive glassmorphic dashboard
-        ├── index.html
-        ├── styles.css
-        ├── script.js
-        └── server.py
+└── docs/                          # Detailed engineering reports
+    ├── MODEL_GUIDE_AND_INVENTORY.md # Live system model inventory & selection criteria
+    ├── DELL_G15_5530_REVIEW.md    # Hardware analysis, bottlenecks & thermal guide
+    └── BENCHMARK_RESULTS.md       # Empirical benchmark results & optimization matrix
 ```
 
 ---
 
 ## 🚀 Quickstart Guide
 
-### 1. Setup & Hardware Tuning (Linux)
+### 1. One-Click Setup & Global CLI Installation
 ```bash
 # Clone the repository
 git clone https://github.com/ullu1221/dell-g15-ai-optimizer.git
 cd dell-g15-ai-optimizer
 
-# Make all scripts executable and inspect hardware
+# Make all scripts executable and symlink 'g15' to /usr/local/bin
 ./setup.sh
 
-# Apply one-click hardware performance tuning (requires sudo)
-sudo ./system/tune_system.sh
-
-# (Optional) Persist tuning across system reboots
-sudo cp system/dell_g15_tuning.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now dell_g15_tuning.service
+# Lock hardware to maximum performance (persists across reboots)
+sudo g15 tune --service
 ```
 
-### 2. Download Recommended Models
+### 2. Chat with Models
 ```bash
-# Download 14B Hybrid Reasoner (~8.5GB)
-python3 inference/download_gguf.py --preset qwen14b
+# Coding assistant (Qwen2.5-Coder-7B Q5_K_M)
+g15 chat coder
 
-# Or download 7B Coding Specialist (~5.4GB)
-python3 inference/download_gguf.py --preset qwen7b-coder
+# Deep reasoning (Qwen2.5-14B Hybrid, pinned to 6 P-cores)
+g15 chat reasoner
+
+# Uncensored multi-turn chat (Hermes-3-8B)
+g15 chat agent
 ```
 
-### 3. Run Minimal-Loss Hybrid Inference
+### 3. Serve via OpenAI-Compatible API
 ```bash
-# Interactive CLI mode
-./inference/run_hybrid.sh ~/models/qwen2.5-14b-instruct-q4_k_m.gguf cli
-
-# Or launch OpenAI-compatible HTTP API server on port 8080
-./inference/run_hybrid.sh ~/models/qwen2.5-14b-instruct-q4_k_m.gguf server
-```
-
-### 4. Serve via vLLM (6GB Profile)
-```bash
-# Install dependencies
-pip install -r vllm/requirements.txt
-
-# Start vLLM with Marlin INT4 & CPU linear offload
-./vllm/serve_vllm.sh Qwen/Qwen2.5-Coder-7B-Instruct-AWQ
+# Launch OpenAI-compatible API server on port 8080
+g15 serve reasoner
 
 # In another terminal, benchmark TTFT and tokens/sec
-python3 vllm/test_client.py
+g15 test
+```
+
+### 4. Reclaim VRAM Instantly
+```bash
+# Safely unloads all background models and flushes GPU VRAM back to 100% free
+g15 free
 ```
 
 ---
