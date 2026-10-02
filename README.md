@@ -49,16 +49,19 @@ This suite provides pre-configured, turn-key solutions for all of the above.
 
 ---
 
-## 📊 Empirical Benchmarks (Dell G15 5530)
+## 📊 Live Model Inventory & Empirical Benchmarks
 
 | Model | Size & Quant | Strategy | Generation Speed | Context Ceiling | Role |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Qwen2.5-Coder-7B-Instruct** | 5.4 GB (Q5_K_M) | 100% GPU | **38.4 tok/s** | 8,192 tokens | Primary coding assistant |
+| **Qwen2.5-Coder-7B-Instruct**<br>*(aliased to `qwen2.5-coder:7b`)* | 5.4 GB (Q5_K_M) | 100% GPU (Ollama) | **38.4 tok/s** | 8,192 tokens | Primary coding assistant (<0.03 perplexity loss) |
 | **Qwen2.5-14B-Instruct** | 8.5 GB (Q4_K_M) | Hybrid (24 GPU / 24 CPU) | **9.2 tok/s** | 8,192 tokens | Complex reasoning & architecture |
-| **Hermes-3-Llama-3.1-8B** | 4.9 GB (Q4_K_M) | 100% GPU | **34.8 tok/s** | 8,192 tokens | Multi-turn agentic chat |
+| **Hermes-3-Llama-3.1-8B** | 4.9 GB (Q4_K_M) | 100% GPU (Ollama) | **34.8 tok/s** | 8,192 tokens | Multi-turn agentic chat & tool calling |
+| **Gemma-4-e4B** | 6.6 GB (Q4_K_M) | 100% GPU (Ollama) | **30.1 tok/s** | 8,192 tokens | Low-latency summarization & quick QA |
 | **Qwen2.5-Coder-7B-AWQ** | 4.5 GB (AWQ Marlin) | vLLM (2GB CPU Offload) | **31.6 tok/s** | 4,096 tokens | Multi-tenant OpenAI API server |
 
-> See [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md) for full latency, power, and perplexity data.
+> 📖 **Full Inventory & Selection Guide:** See [`docs/MODEL_GUIDE_AND_INVENTORY.md`](docs/MODEL_GUIDE_AND_INVENTORY.md) for detailed analysis on model rankings, memory footprints, Ollama aliasing, and why unaligned models like `CodeQwen1.5-7B-AWQ` were pruned.
+>
+> 📈 **Benchmark Matrices:** See [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md) for full latency, power, and perplexity data.
 
 ---
 
@@ -92,6 +95,7 @@ dell-g15-ai-optimizer/
 │   └── inspect_hardware.py        # CPU topology & GPU memory inspector
 │
 ├── docs/                          # Detailed engineering reports
+│   ├── MODEL_GUIDE_AND_INVENTORY.md # Live system model inventory & selection criteria
 │   ├── DELL_G15_5530_REVIEW.md    # Hardware analysis, bottlenecks & thermal guide
 │   └── BENCHMARK_RESULTS.md       # Empirical benchmark results & optimization matrix
 │
