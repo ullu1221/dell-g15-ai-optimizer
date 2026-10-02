@@ -249,7 +249,7 @@ def cmd_status():
     print("=" * 60)
 
 
-def cmd_tune(enable_service: bool = False):
+def cmd_tune(enable_service: bool = False, performance: bool = False):
     tune_script = REPO_DIR / "system" / "tune_system.sh"
     if not tune_script.exists():
         print(f"[ERROR] tune_system.sh not found at {tune_script}")
@@ -258,6 +258,8 @@ def cmd_tune(enable_service: bool = False):
     cmd = ["sudo", str(tune_script)]
     if enable_service:
         cmd.append("--install-service")
+    if performance:
+        cmd.append("--performance")
     subprocess.run(cmd)
 
 
@@ -447,6 +449,7 @@ def main():
     # tune
     tune_parser = subparsers.add_parser("tune", help="1-click system performance tuning")
     tune_parser.add_argument("--service", action="store_true", help="Enable systemd persistence service across reboots")
+    tune_parser.add_argument("--performance", action="store_true", help="Also engage G-Mode / performance profile (default: preserve balanced)")
 
     # free
     subparsers.add_parser("free", help="Flush all VRAM and unload background models")
@@ -501,7 +504,7 @@ def main():
     if args.command == "status":
         cmd_status()
     elif args.command == "tune":
-        cmd_tune(args.service)
+        cmd_tune(args.service, args.performance)
     elif args.command == "mode":
         cmd_mode(args.target)
     elif args.command == "balance":
