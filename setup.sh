@@ -20,6 +20,8 @@ chmod +x "$REPO_DIR"/inference/*.py || true
 chmod +x "$REPO_DIR"/vllm/*.sh || true
 chmod +x "$REPO_DIR"/vllm/*.py || true
 chmod +x "$REPO_DIR"/diagnostics/*.py || true
+chmod +x "$REPO_DIR"/tests/*.sh || true
+chmod +x "$REPO_DIR"/tests/*.py || true
 
 # 2. Link g15 CLI globally if permissions permit
 if [[ -w /usr/local/bin ]]; then
@@ -48,4 +50,5 @@ echo "   g15 chat reasoner   # Start 14B hybrid reasoner (P-core pinned)"
 echo "   g15 serve           # Launch OpenAI API server on port 8080"
 echo "   g15 status          # View real-time thermals & VRAM headroom"
 echo "   g15 free            # Reclaim GPU VRAM instantly"
+echo "   g15 verify          # Run complete 13-test verification suite"
 echo "=========================================================="

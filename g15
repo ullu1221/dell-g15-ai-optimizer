@@ -13,6 +13,7 @@ Usage:
   g15 serve <preset|path>  # Start OpenAI-compatible API server on port 8080
   g15 test                 # Test & benchmark running OpenAI API server
   g15 benchmark            # Run prompt eval & token generation benchmarks
+  g15 verify               # Run full 13-test functional verification suite
 """
 
 import argparse
@@ -487,6 +488,10 @@ def main():
     subparsers.add_parser("torture", help="Run extreme 5-stage Death Test (saturation, 6x hammer, dirty kill, thermals)")
     subparsers.add_parser("death-test", help="Alias for 'torture'")
 
+    # verify (test-all)
+    subparsers.add_parser("verify", help="Run full automated functional & accuracy verification suite")
+    subparsers.add_parser("test-all", help="Alias for 'verify'")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -513,6 +518,12 @@ def main():
         cmd_test(args.url, args.prompt, args.tokens)
     elif args.command == "benchmark":
         cmd_benchmark()
+    elif args.command in ("verify", "test-all"):
+        test_script = REPO_DIR / "tests" / "run_all_tests.sh"
+        if test_script.exists():
+            subprocess.run(["bash", str(test_script)])
+        else:
+            print("[ERROR] run_all_tests.sh not found.")
     elif args.command in ("torture", "death-test"):
         torture_script = REPO_DIR / "inference" / "torture_test.py"
         if torture_script.exists():

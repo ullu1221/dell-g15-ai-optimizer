@@ -172,7 +172,7 @@ g15 free
 ### 5. Run Full Verification Suite
 ```bash
 # Executes 13 automated tests across CLI, ACPI power, model accuracy, and API compliance
-./tests/run_all_tests.sh
+g15 verify       # Or: ./tests/run_all_tests.sh
 ```
 
 ---
