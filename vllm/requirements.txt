@@ -1,0 +1,7 @@
+# Dell G15 5530 vLLM serving dependencies
+vllm>=0.6.2
+torch>=2.4.0
+huggingface_hub>=0.24.0
+pydantic>=2.0.0
+fastapi>=0.110.0
+uvicorn>=0.30.0

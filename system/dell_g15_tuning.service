@@ -1,0 +1,11 @@
+[Unit]
+Description=Dell G15 5530 Local AI Hardware Optimizer
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/dell-g15-tune
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

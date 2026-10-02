@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-glow"></div>
+    <main class="app-container">
+        <header class="search-header">
+            <div class="search-box">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="cityInput" placeholder="Search any city (e.g. London, Tokyo, New York)..." autocomplete="off">
+                <button id="searchBtn" title="Search">Search</button>
+            </div>
+            <button id="geoBtn" class="geo-btn" title="Use current location">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                <span>My Location</span>
+            </button>
+        </header>
+
+        <section id="statusMsg" class="status-msg hidden"></section>
+
+        <section id="weatherCard" class="weather-card hidden">
+            <div class="card-header">
+                <div>
+                    <h2 id="cityName">London</h2>
+                    <p id="countryName" class="country-label">United Kingdom</p>
+                    <p id="dateTime" class="date-label">Saturday, Oct 3</p>
+                </div>
+                <div class="weather-icon-wrapper">
+                    <span id="weatherIcon" class="weather-emoji">☀️</span>
+                </div>
+            </div>
+
+            <div class="temperature-block">
+                <div class="temp-display">
+                    <span id="tempValue">21</span><span class="unit">°C</span>
+                </div>
+                <p id="weatherDesc" class="weather-desc">Partly Cloudy</p>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-label">Wind Speed</span>
+                    <span id="windSpeed" class="metric-value">14 km/h</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Humidity</span>
+                    <span id="humidity" class="metric-value">65%</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Apparent Temp</span>
+                    <span id="feelsLike" class="metric-value">20°C</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Wind Direction</span>
+                    <span id="windDir" class="metric-value">SW (220°)</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
