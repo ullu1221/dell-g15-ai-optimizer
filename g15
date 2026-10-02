@@ -483,6 +483,10 @@ def main():
     # benchmark
     subparsers.add_parser("benchmark", help="Run automated throughput and prompt eval benchmark")
 
+    # torture (death-test)
+    subparsers.add_parser("torture", help="Run extreme 5-stage Death Test (saturation, 6x hammer, dirty kill, thermals)")
+    subparsers.add_parser("death-test", help="Alias for 'torture'")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -509,6 +513,12 @@ def main():
         cmd_test(args.url, args.prompt, args.tokens)
     elif args.command == "benchmark":
         cmd_benchmark()
+    elif args.command in ("torture", "death-test"):
+        torture_script = REPO_DIR / "inference" / "torture_test.py"
+        if torture_script.exists():
+            subprocess.run([sys.executable, str(torture_script)])
+        else:
+            print("[ERROR] torture_test.py not found.")
 
 
 if __name__ == "__main__":

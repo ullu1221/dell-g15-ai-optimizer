@@ -83,6 +83,7 @@ g15 chat fast            # Launches Gemma 4 4B fast assistant (~70 tok/s)
 g15 serve reasoner       # Starts OpenAI API server on port 8080 (P-core pinned)
 g15 test                 # Benchmarks active API server (TTFT & tok/s)
 g15 benchmark            # Runs prompt eval & token generation benchmark
+g15 torture              # Runs 5-stage Death Test (saturation, 6x hammer, dirty kill, thermals)
 ```
 
 ---
@@ -102,6 +103,7 @@ dell-g15-ai-optimizer/
 │   └── dell_g15_tuning.service    # Systemd service for persistent boot optimization
 │
 ├── inference/                     # Native hybrid inference engine
+│   ├── torture_test.py            # Extreme 5-stage Death Test suite
 │   ├── run_hybrid.sh              # Linux launcher (P-core pinning, FlashAttn, Min-P)
 │   ├── run_hybrid.bat             # Windows 11 launcher (0x555 affinity mask)
 │   ├── download_gguf.py           # Resilient GGUF downloader with HTTP range resumption
