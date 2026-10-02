@@ -79,7 +79,7 @@ def stage_1_context_saturation():
         "-ctk", "q8_0",
         "-ctv", "q8_0",
         "-n", "64",
-        "--no-conversation",
+        "--single-turn",
         "-p", prompt,
     ]
 
