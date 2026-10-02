@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-MODEL="${1:-/home/p/models/Qwen2.5-14B-Instruct-Q4_K_M.gguf}"
+MODEL="${1:-${HOME}/models/Qwen2.5-14B-Instruct-Q4_K_M.gguf}"
 
 if [[ ! -f "$MODEL" ]]; then
     echo "[!] Benchmark model not found at $MODEL"

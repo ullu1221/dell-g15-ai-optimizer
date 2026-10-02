@@ -58,10 +58,10 @@ ollama run qwen2.5-coder:7b
 ### Run 14B Hybrid Model (Native llama.cpp with P-Core Pinning)
 ```bash
 # Interactive CLI
-/home/p/dell-g15-ai-optimizer/inference/run_hybrid.sh /home/p/models/Qwen2.5-14B-Instruct-Q4_K_M.gguf cli
+./inference/run_hybrid.sh ~/models/Qwen2.5-14B-Instruct-Q4_K_M.gguf cli
 
 # Or launch local server on port 8080
-/home/p/dell-g15-ai-optimizer/inference/run_hybrid.sh /home/p/models/Qwen2.5-14B-Instruct-Q4_K_M.gguf server
+./inference/run_hybrid.sh ~/models/Qwen2.5-14B-Instruct-Q4_K_M.gguf server
 ```
 
 ### Run Hermes 3 (Ollama)
