@@ -412,10 +412,15 @@ def cmd_serve(target: str, port: int):
     os.execvp("taskset", args)
 
 
-def cmd_test(base_url: str):
+def cmd_test(base_url: str, prompt: str = None, tokens: int = None):
     test_client = REPO_DIR / "vllm" / "test_client.py"
     if test_client.exists():
-        subprocess.run([sys.executable, str(test_client), "--url", base_url])
+        cmd = [sys.executable, str(test_client), "--url", base_url]
+        if prompt:
+            cmd.extend(["--prompt", prompt])
+        if tokens:
+            cmd.extend(["--tokens", str(tokens)])
+        subprocess.run(cmd)
     else:
         print("[ERROR] test_client.py not found.")
 
@@ -465,6 +470,8 @@ def main():
     # test
     test_parser = subparsers.add_parser("test", help="Test & benchmark active OpenAI API server")
     test_parser.add_argument("--url", default=f"http://localhost:{SERVER_DEFAULT_PORT}/v1", help="API base URL")
+    test_parser.add_argument("--tokens", type=int, default=128, help="Max tokens to generate")
+    test_parser.add_argument("--prompt", default=None, help="Prompt text for benchmarking")
 
     # mode
     mode_parser = subparsers.add_parser("mode", help="Switch power profile (performance, balanced, power-saver)")
@@ -499,7 +506,7 @@ def main():
     elif args.command == "serve":
         cmd_serve(args.target, args.port)
     elif args.command == "test":
-        cmd_test(args.url)
+        cmd_test(args.url, args.prompt, args.tokens)
     elif args.command == "benchmark":
         cmd_benchmark()
 

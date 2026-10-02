@@ -24,6 +24,27 @@ def test_endpoint(base_url: str, prompt: str, max_tokens: int = 128, temperature
         "stream": True,
     }
 
+    # Wait for server readiness if loading (up to 15s)
+    base = base_url.rstrip("/")
+    root_url = base[:-3] if base.endswith("/v1") else base
+    health_url = f"{root_url}/health"
+
+    ready = False
+    sys.stdout.write(f"[+] Checking server readiness at {health_url}")
+    for _ in range(15):
+        try:
+            with urllib.request.urlopen(health_url, timeout=2) as h_resp:
+                if h_resp.status == 200:
+                    ready = True
+                    break
+        except Exception:
+            time.sleep(1)
+            sys.stdout.write(".")
+            sys.stdout.flush()
+
+    print(" [Ready]" if ready else " [Proceeding]")
+    print(f"[+] Connecting to {endpoint}...")
+
     req = urllib.request.Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),
@@ -31,7 +52,6 @@ def test_endpoint(base_url: str, prompt: str, max_tokens: int = 128, temperature
         method="POST",
     )
 
-    print(f"[+] Connecting to {endpoint}...")
     start_time = time.perf_counter()
     first_token_time = None
     token_count = 0
