@@ -45,8 +45,36 @@ echo "[3/4] Optimizing Kernel Virtual Memory Map Limits..."
 sysctl -w vm.max_map_count=1048576 > /dev/null
 echo "  -> vm.max_map_count = 1048576 (prevents mmap allocation limits)"
 
-# 4. Telemetry Verification
-echo "[4/4] Verifying GPU Power & Memory..."
+# 4. Thermal & Fan Permissions for Non-Root Users (group wheel)
+echo "[4/5] Configuring Thermal & Fan Control Permissions..."
+mkdir -p /etc/tmpfiles.d
+cat << 'EOF' > /etc/tmpfiles.d/dell-g15-thermal.conf
+# Dell G15 5530 Hardware Thermal & Fan Controls
+z /sys/class/platform-profile/platform-profile-0/profile 0664 root wheel -
+z /sys/class/platform-profile/platform-profile-0/device/hwmon/hwmon*/fan1_boost 0664 root wheel -
+z /sys/class/platform-profile/platform-profile-0/device/hwmon/hwmon*/fan2_boost 0664 root wheel -
+z /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference 0664 root wheel -
+EOF
+chmod 644 /etc/tmpfiles.d/dell-g15-thermal.conf
+if command -v systemd-tmpfiles &>/dev/null; then
+    systemd-tmpfiles --create /etc/tmpfiles.d/dell-g15-thermal.conf 2>/dev/null || true
+fi
+# Apply directly to active sysfs nodes immediately
+WMAX_PROF="/sys/class/platform-profile/platform-profile-0/profile"
+if [[ -f "$WMAX_PROF" ]]; then
+    chmod 0664 "$WMAX_PROF" 2>/dev/null || true
+    chown :wheel "$WMAX_PROF" 2>/dev/null || true
+fi
+for f in /sys/class/platform-profile/platform-profile-0/device/hwmon/hwmon*/fan*_boost; do
+    if [[ -f "$f" ]]; then
+        chmod 0664 "$f" 2>/dev/null || true
+        chown :wheel "$f" 2>/dev/null || true
+    fi
+done
+echo "  -> Granted group 'wheel' write permissions to native AWCC thermal & fan boost nodes"
+
+# 5. Telemetry Verification
+echo "[5/5] Verifying GPU Power & Memory..."
 GPU_INFO=$(nvidia-smi --query-gpu=power.limit,memory.total,memory.free --format=csv,noheader)
 echo "  -> GPU Specs: $GPU_INFO"
 

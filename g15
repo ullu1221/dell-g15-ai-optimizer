@@ -307,21 +307,49 @@ def cmd_mode(target: str):
     resolved = mode_aliases[target]
     print(f"[+] Setting Dell G15 thermal/power profile to '{resolved}'...")
 
-    # 1. Synchronize with power-profiles-daemon for 100% desktop & script compatibility
-    ppd_map = {
-        "battery": "power-saver",
-        "quiet": "power-saver",
+    awcc_plat = Path("/sys/class/platform-profile/platform-profile-0/profile")
+    is_wmax_writable = awcc_plat.exists() and os.access(awcc_plat, os.W_OK)
+    plat_map = {
+        "battery": "low-power",
+        "quiet": "quiet",
         "balanced": "balanced",
-        "performance": "performance",
+        "performance": "balanced-performance",
         "gmode": "performance",
     }
-    ppd_target = ppd_map.get(resolved, "balanced")
-    if shutil.which("powerprofilesctl"):
-        res = subprocess.run(["powerprofilesctl", "set", ppd_target], capture_output=True, text=True)
-        if res.returncode == 0:
-            print(f"[✓] Synced with power-profiles-daemon ('{ppd_target}' active in desktop slider).")
+    plat_val = plat_map.get(resolved)
 
-    # 2. Hardware Energy Performance Preference (EPP) registers
+    # 1. Synchronize with power-profiles-daemon for 100% desktop & script compatibility
+    # CRITICAL: If target is 'performance' (AWCC 0xa1 balanced-performance), powerprofilesctl
+    # maps 'performance' directly to AWCC 0xab (Game Shift 100% fan override).
+    # If the user lacks permissions to write 'balanced-performance' to sysfs, setting PPD to
+    # 'performance' will permanently trap the laptop in deafening 5000 RPM fans!
+    if resolved == "performance" and not is_wmax_writable:
+        print(f"[!] Notice: Writing to {awcc_plat} requires root or group 'wheel' permissions.")
+        print("    Kept power-profiles-daemon on 'balanced' to prevent locking into 100% G-Mode fan scream (0xab).")
+        print("    Run 'sudo dell-g15-thermal init' once to permanently enable non-root switching.")
+    else:
+        ppd_map = {
+            "battery": "power-saver",
+            "quiet": "power-saver",
+            "balanced": "balanced",
+            "performance": "performance",
+            "gmode": "performance",
+        }
+        ppd_target = ppd_map.get(resolved, "balanced")
+        if shutil.which("powerprofilesctl"):
+            res = subprocess.run(["powerprofilesctl", "set", ppd_target], capture_output=True, text=True)
+            if res.returncode == 0:
+                print(f"[✓] Synced with power-profiles-daemon ('{ppd_target}' active in desktop slider).")
+
+    # 2. Direct Dell WMAX platform profile hardware sync
+    if awcc_plat.exists() and plat_val and is_wmax_writable:
+        try:
+            awcc_plat.write_text(plat_val)
+            print(f"[✓] Applied native AWCC thermal mode '{plat_val}' to WMAX hardware.")
+        except Exception:
+            pass
+
+    # 3. Hardware Energy Performance Preference (EPP) registers
     epp_map = {
         "battery": "power",
         "quiet": "power",
@@ -336,23 +364,10 @@ def cmd_mode(target: str):
         except Exception:
             pass
 
-    # 3. Direct Dell WMAX platform profile hardware sync
-    plat_map = {
-        "battery": "low-power",
-        "quiet": "quiet",
-        "balanced": "balanced",
-        "performance": "balanced-performance",
-        "gmode": "performance",
-    }
-    plat_val = plat_map.get(resolved)
-    awcc_plat = Path("/sys/class/platform-profile/platform-profile-0/profile")
-    if awcc_plat.exists() and plat_val:
-        try:
-            awcc_plat.write_text(plat_val)
-            print(f"[✓] Applied native AWCC thermal mode '{plat_val}' to WMAX hardware.")
-        except Exception:
-            pass
-    print(f"[✓] Dell G15 '{resolved}' profile successfully activated.")
+    if resolved == "performance" and not is_wmax_writable:
+        print(f"[✓] Dell G15 CPU EPP set to '{epp_val}' (boost active, quiet dynamic fans).")
+    else:
+        print(f"[✓] Dell G15 '{resolved}' profile successfully activated.")
 
 
 def get_alienware_hwmon():
