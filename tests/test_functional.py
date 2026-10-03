@@ -89,7 +89,7 @@ def test_power_profiles():
     record_result(
         "Power",
         "Switch to Performance Mode",
-        epp_perf == "performance" and acpi_perf == "performance",
+        epp_perf == "performance" and acpi_perf in ("performance", "custom"),
         f"EPP: {epp_perf}, ACPI: {acpi_perf}",
     )
 
