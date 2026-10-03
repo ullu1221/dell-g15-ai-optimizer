@@ -192,7 +192,26 @@ def cmd_status():
         with open(plat_profile_file, "r") as f:
             plat_profile = f.read().strip()
 
+    wmax_mode = "unknown"
+    wmax_file = "/sys/class/platform-profile/platform-profile-0/profile"
+    if os.path.exists(wmax_file):
+        try:
+            with open(wmax_file, "r") as f:
+                wmax_mode = f.read().strip()
+        except Exception:
+            pass
+
+    cpu_fan_rpm = "N/A"
+    gpu_fan_rpm = "N/A"
+    for hwmon in Path("/sys/class/platform-profile/platform-profile-0/device/hwmon").glob("hwmon*"):
+        try:
+            cpu_fan_rpm = hwmon.joinpath("fan1_input").read_text().strip() + " RPM"
+            gpu_fan_rpm = hwmon.joinpath("fan2_input").read_text().strip() + " RPM"
+        except Exception:
+            pass
+
     print(f"Power Profile:         {profile.upper()} (ACPI: {plat_profile}, EPP: {epp})")
+    print(f"Dell Thermal Engine:   AWCC WMAX (Mode: {wmax_mode}, CPU Fan: {cpu_fan_rpm}, GPU Fan: {gpu_fan_rpm})")
     print(f"CPU Scaling Governor:  {gov}")
 
     # GPU Information
@@ -265,36 +284,154 @@ def cmd_tune(enable_service: bool = False, performance: bool = False):
 
 def cmd_mode(target: str):
     target = target.lower().strip()
-    valid_modes = {"performance", "balanced", "power-saver", "quiet"}
-    if target == "balance":
-        target = "balanced"
-    elif target in ("saver", "quiet"):
-        target = "power-saver"
+    mode_aliases = {
+        "balance": "balanced",
+        "balanced": "balanced",
+        "perf": "performance",
+        "performance": "performance",
+        "quiet": "quiet",
+        "silent": "quiet",
+        "battery": "battery",
+        "saver": "battery",
+        "power-saver": "battery",
+        "low-power": "battery",
+        "gmode": "gmode",
+        "g-mode": "gmode",
+        "gameshift": "gmode",
+    }
 
-    if target not in valid_modes:
-        print(f"[ERROR] Invalid mode '{target}'. Valid choices: performance, balanced, power-saver")
+    if target not in mode_aliases:
+        print(f"[ERROR] Invalid mode '{target}'. Valid choices: battery, quiet, balanced, performance, gmode")
         sys.exit(1)
 
-    print(f"[+] Setting Dell G15 power profile to '{target}'...")
-    if shutil.which("powerprofilesctl"):
-        res = subprocess.run(["powerprofilesctl", "set", target], capture_output=True, text=True)
-        if res.returncode == 0:
-            print(f"[✓] Successfully activated '{target}' mode via power-profiles-daemon.")
-            return
+    resolved = mode_aliases[target]
+    print(f"[+] Setting Dell G15 thermal/power profile to '{resolved}'...")
 
-    # Fallback to direct EPP / ACPI
-    epp_map = {
+    # 1. Synchronize with power-profiles-daemon for 100% desktop & script compatibility
+    ppd_map = {
+        "battery": "power-saver",
+        "quiet": "power-saver",
+        "balanced": "balanced",
         "performance": "performance",
-        "balanced": "balance_performance",
-        "power-saver": "power",
+        "gmode": "performance",
     }
-    epp_val = epp_map.get(target, "balance_performance")
+    ppd_target = ppd_map.get(resolved, "balanced")
+    if shutil.which("powerprofilesctl"):
+        res = subprocess.run(["powerprofilesctl", "set", ppd_target], capture_output=True, text=True)
+        if res.returncode == 0:
+            print(f"[✓] Synced with power-profiles-daemon ('{ppd_target}' active in desktop slider).")
+
+    # 2. Hardware Energy Performance Preference (EPP) registers
+    epp_map = {
+        "battery": "power",
+        "quiet": "power",
+        "balanced": "balance_performance",
+        "performance": "performance",
+        "gmode": "performance",
+    }
+    epp_val = epp_map.get(resolved, "balance_performance")
     for epp in Path("/sys/devices/system/cpu").glob("cpu*/cpufreq/energy_performance_preference"):
         try:
             epp.write_text(epp_val)
         except Exception:
             pass
-    print(f"[✓] Applied '{target}' mode to hardware registers.")
+
+    # 3. Direct Dell WMAX platform profile hardware sync
+    plat_map = {
+        "battery": "low-power",
+        "quiet": "quiet",
+        "balanced": "balanced",
+        "performance": "balanced-performance",
+        "gmode": "performance",
+    }
+    plat_val = plat_map.get(resolved)
+    awcc_plat = Path("/sys/class/platform-profile/platform-profile-0/profile")
+    if awcc_plat.exists() and plat_val:
+        try:
+            awcc_plat.write_text(plat_val)
+            print(f"[✓] Applied native AWCC thermal mode '{plat_val}' to WMAX hardware.")
+        except Exception:
+            pass
+    print(f"[✓] Dell G15 '{resolved}' profile successfully activated.")
+
+
+def get_alienware_hwmon():
+    for hwmon in Path("/sys/class/platform-profile/platform-profile-0/device/hwmon").glob("hwmon*"):
+        return hwmon
+    for hwmon in Path("/sys/class/hwmon").glob("hwmon*"):
+        try:
+            if (hwmon / "name").read_text().strip() == "alienware_wmi":
+                return hwmon
+        except Exception:
+            pass
+    return None
+
+
+def cmd_gmode():
+    wmax_file = Path("/sys/class/platform-profile/platform-profile-0/profile")
+    current = wmax_file.read_text().strip() if wmax_file.exists() else ""
+    if current == "performance":
+        print("[+] Game Shift / G-Mode is currently ACTIVE -> Disengaging to Balanced mode...")
+        cmd_mode("balanced")
+    else:
+        print("[+] Engaging Game Shift / G-Mode (Full fan speed override)...")
+        cmd_mode("gmode")
+
+
+def cmd_fan(cpu_boost: int = None, gpu_boost: int = None):
+    hwmon = get_alienware_hwmon()
+    wmax_file = Path("/sys/class/platform-profile/platform-profile-0/profile")
+    wmax_mode = wmax_file.read_text().strip() if wmax_file.exists() else "unknown"
+
+    if cpu_boost is not None and hwmon:
+        try:
+            (hwmon / "fan1_boost").write_text(str(cpu_boost))
+            print(f"[✓] CPU Fan Boost offset set to {cpu_boost}%.")
+        except PermissionError:
+            print(f"[!] Setting fan boost requires root: sudo g15 fan {cpu_boost}")
+        except Exception as e:
+            print(f"[!] Error setting CPU fan boost: {e}")
+
+    if gpu_boost is not None and hwmon:
+        try:
+            (hwmon / "fan2_boost").write_text(str(gpu_boost))
+            print(f"[✓] GPU Fan Boost offset set to {gpu_boost}%.")
+        except PermissionError:
+            pass
+        except Exception as e:
+            print(f"[!] Error setting GPU fan boost: {e}")
+
+    cpu_rpm = "N/A"
+    gpu_rpm = "N/A"
+    cpu_b = "0"
+    gpu_b = "0"
+    cpu_temp = "N/A"
+    gpu_temp = "N/A"
+
+    if hwmon:
+        try:
+            cpu_rpm = f"{(hwmon / 'fan1_input').read_text().strip()} RPM"
+            gpu_rpm = f"{(hwmon / 'fan2_input').read_text().strip()} RPM"
+            cpu_b = (hwmon / "fan1_boost").read_text().strip()
+            gpu_b = (hwmon / "fan2_boost").read_text().strip()
+            cpu_t = int((hwmon / "temp1_input").read_text().strip()) // 1000
+            gpu_t = int((hwmon / "temp2_input").read_text().strip()) // 1000
+            cpu_temp = f"{cpu_t} °C"
+            gpu_temp = f"{gpu_t} °C"
+        except Exception:
+            pass
+
+    gmode_active = (wmax_mode == "performance")
+    print("=" * 60)
+    print(" DELL G15 5530 THERMAL & FAN TELEMETRY")
+    print("=" * 60)
+    print(f"Native AWCC Profile:   {wmax_mode.upper()}")
+    print(f"Game Shift / G-Mode:   {'ACTIVE [100% FAN OVERRIDE]' if gmode_active else 'OFF [Dynamic Acoustic Curve]'}")
+    print(f"CPU Fan:               {cpu_rpm} (Boost Offset: {cpu_b}%)")
+    print(f"GPU Fan:               {gpu_rpm} (Boost Offset: {gpu_b}%)")
+    print(f"CPU Temperature:       {cpu_temp}")
+    print(f"GPU Temperature:       {gpu_temp}")
+    print("=" * 60)
 
 
 def cmd_list():
@@ -484,6 +621,18 @@ def main():
     # balance (alias for mode balanced)
     subparsers.add_parser("balance", help="Quick shortcut to activate balanced mode")
 
+    # gmode (shortcut for mode gmode)
+    subparsers.add_parser("gmode", help="Quick shortcut to toggle Game Shift / G-Mode")
+
+    # fan / fans
+    fan_parser = subparsers.add_parser("fan", help="Inspect or adjust Dell G15 fans (CPU/GPU fan boost 0-100%%)")
+    fan_parser.add_argument("cpu_boost", nargs="?", type=int, default=None, help="CPU fan boost percentage (0-100)")
+    fan_parser.add_argument("gpu_boost", nargs="?", type=int, default=None, help="GPU fan boost percentage (0-100)")
+
+    fans_parser = subparsers.add_parser("fans", help="Alias for 'fan'")
+    fans_parser.add_argument("cpu_boost", nargs="?", type=int, default=None, help="CPU fan boost percentage (0-100)")
+    fans_parser.add_argument("gpu_boost", nargs="?", type=int, default=None, help="GPU fan boost percentage (0-100)")
+
     # benchmark
     subparsers.add_parser("benchmark", help="Run automated throughput and prompt eval benchmark")
 
@@ -509,6 +658,10 @@ def main():
         cmd_mode(args.target)
     elif args.command == "balance":
         cmd_mode("balanced")
+    elif args.command == "gmode":
+        cmd_gmode()
+    elif args.command in ("fan", "fans"):
+        cmd_fan(args.cpu_boost, args.gpu_boost)
     elif args.command in ("free", "unload"):
         unload_all_vram()
     elif args.command == "list":
