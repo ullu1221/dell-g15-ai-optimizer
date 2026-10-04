@@ -22,6 +22,7 @@ python3 -m py_compile \
     "$REPO_DIR"/inference/torture_test.py \
     "$REPO_DIR"/vllm/download_awq.py \
     "$REPO_DIR"/vllm/test_client.py \
+    "$SCRIPT_DIR"/production_death_loop_test.py \
     "$SCRIPT_DIR"/test_functional.py
 
 bash -n "$REPO_DIR"/setup.sh

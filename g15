@@ -203,10 +203,15 @@ def cmd_status():
 
     cpu_fan_rpm = "N/A"
     gpu_fan_rpm = "N/A"
-    for hwmon in Path("/sys/class/platform-profile/platform-profile-0/device/hwmon").glob("hwmon*"):
+    hwmon = get_alienware_hwmon()
+    if hwmon:
         try:
-            cpu_fan_rpm = hwmon.joinpath("fan1_input").read_text().strip() + " RPM"
-            gpu_fan_rpm = hwmon.joinpath("fan2_input").read_text().strip() + " RPM"
+            f1 = hwmon / "fan1_input"
+            f2 = hwmon / "fan2_input"
+            if f1.exists():
+                cpu_fan_rpm = f"{f1.read_text().strip()} RPM"
+            if f2.exists():
+                gpu_fan_rpm = f"{f2.read_text().strip()} RPM"
         except Exception:
             pass
 
