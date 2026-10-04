@@ -283,6 +283,10 @@ def cmd_tune(enable_service: bool = False, performance: bool = False):
 
 
 def cmd_mode(target: str):
+    if shutil.which("dell-g15-thermal"):
+        subprocess.run(["dell-g15-thermal", "mode", target])
+        return
+
     target = target.lower().strip()
     mode_aliases = {
         "balance": "balanced",
@@ -393,7 +397,22 @@ def cmd_gmode():
         cmd_mode("gmode")
 
 
+def cmd_restore():
+    if shutil.which("dell-g15-thermal"):
+        subprocess.run(["dell-g15-thermal", "restore"])
+        return
+
+
 def cmd_fan(cpu_boost: int = None, gpu_boost: int = None):
+    if shutil.which("dell-g15-thermal"):
+        cmd = ["dell-g15-thermal", "fan"]
+        if cpu_boost is not None:
+            cmd.append(str(cpu_boost))
+            if gpu_boost is not None:
+                cmd.append(str(gpu_boost))
+        subprocess.run(cmd)
+        return
+
     hwmon = get_alienware_hwmon()
     wmax_file = Path("/sys/class/platform-profile/platform-profile-0/profile")
     wmax_mode = wmax_file.read_text().strip() if wmax_file.exists() else "unknown"
@@ -659,6 +678,9 @@ def main():
     subparsers.add_parser("verify", help="Run full automated functional & accuracy verification suite")
     subparsers.add_parser("test-all", help="Alias for 'verify'")
 
+    # restore
+    subparsers.add_parser("restore", help="Restore last saved thermal state across reboots")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -675,6 +697,8 @@ def main():
         cmd_mode("balanced")
     elif args.command == "gmode":
         cmd_gmode()
+    elif args.command == "restore":
+        cmd_restore()
     elif args.command in ("fan", "fans"):
         cmd_fan(args.cpu_boost, args.gpu_boost)
     elif args.command in ("free", "unload"):

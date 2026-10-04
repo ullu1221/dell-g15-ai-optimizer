@@ -78,10 +78,12 @@ echo "[5/5] Verifying GPU Power & Memory..."
 GPU_INFO=$(nvidia-smi --query-gpu=power.limit,memory.total,memory.free --format=csv,noheader)
 echo "  -> GPU Specs: $GPU_INFO"
 
-# Copy binary to /usr/local/bin
-cp "$0" /usr/local/bin/dell-g15-tune
-chmod +x /usr/local/bin/dell-g15-tune
-echo "  -> Synced standalone tuning binary to /usr/local/bin/dell-g15-tune"
+# Copy binary to /usr/local/bin if not already running from there
+if [[ "$0" != "/usr/local/bin/dell-g15-tune" && "$(realpath "$0" 2>/dev/null)" != "/usr/local/bin/dell-g15-tune" ]]; then
+    cp "$0" /usr/local/bin/dell-g15-tune
+    chmod +x /usr/local/bin/dell-g15-tune
+    echo "  -> Synced standalone tuning binary to /usr/local/bin/dell-g15-tune"
+fi
 
 if [[ "${*:-}" =~ "--install-service" ]]; then
     SERVICE_SRC="$(dirname "$0")/dell_g15_tuning.service"
